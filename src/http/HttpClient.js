@@ -16,22 +16,24 @@ import {
 export class HttpClient {
     /**
      * @param {object} config - Configurações do cliente
-     * @param {string} config.baseUrl - URL base da API
-     * @param {string} config.apiKey - Chave de API
+     * @param {string} config.baseUrl - URL base da API (sem o prefixo /api, ele é adicionado automaticamente)
+     * @param {string} config.apiKey - Chave de API da sessão
+     * @param {string} config.globalApiKey - Chave de API global/admin (usada em rotas administrativas)
      * @param {number} config.timeout - Timeout em ms (padrão: 30000)
      * @param {number} config.retries - Número de tentativas (padrão: 3)
      */
     constructor(config = {}) {
         this.baseUrl = config.baseUrl || 'http://localhost:3000';
         this.apiKey = config.apiKey;
-        this.timeout = config.timeout || 30000;
-        this.retries = config.retries || 3;
+        this.globalApiKey = config.globalApiKey;
+        this.timeout = config.timeout ?? 30000;
+        this.retries = config.retries ?? 3;
         this.interceptors = [];
         this.middleware = [];
 
         // Criar instância do axios
         this.instance = axios.create({
-            baseURL: this.baseUrl,
+            baseURL: this._resolveApiBaseUrl(this.baseUrl),
             timeout: this.timeout,
             headers: {
                 'Content-Type': 'application/json',
@@ -43,6 +45,15 @@ export class HttpClient {
     }
 
     /**
+     * Todas as rotas da Flash API ficam sob o prefixo /api (ex: /api/chat/send-text)
+     * @private
+     */
+    _resolveApiBaseUrl(baseUrl) {
+        const trimmed = baseUrl.replace(/\/+$/, '');
+        return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+    }
+
+    /**
      * Configura interceptadores de requisição e resposta
      * @private
      */
@@ -50,8 +61,9 @@ export class HttpClient {
         // Interceptador de requisição
         this.instance.interceptors.request.use(
             (config) => {
-                // Adicionar API Key ao header
-                if (this.apiKey) {
+                // Adicionar API Key ao header (sem sobrescrever um header já definido explicitamente,
+                // ex: pelas chamadas *Global que usam a chave de API administrativa)
+                if (this.apiKey && !config.headers['apikey']) {
                     config.headers['apikey'] = this.apiKey;
                 }
 
@@ -134,7 +146,7 @@ export class HttpClient {
      * @returns {Promise}
      */
     async get(url, config = {}) {
-        return this._requestWithRetry('GET', url, null, config);
+        return this._requestWithRetry('GET', url, undefined, config);
     }
 
     /**
@@ -177,14 +189,70 @@ export class HttpClient {
      * @returns {Promise}
      */
     async delete(url, config = {}) {
-        return this._requestWithRetry('DELETE', url, null, config);
+        return this._requestWithRetry('DELETE', url, undefined, config);
+    }
+
+    /**
+     * Mescla o header apikey com a chave global/admin, sobrepondo qualquer valor padrão
+     * @private
+     */
+    _withGlobalKey(config = {}) {
+        return {
+            ...config,
+            headers: {
+                ...config.headers,
+                apikey: this.globalApiKey,
+            },
+        };
+    }
+
+    /**
+     * GET autenticado com a chave de API global (rotas administrativas)
+     * @param {string} url - URL relativa
+     * @param {object} config - Configurações
+     * @returns {Promise}
+     */
+    async getGlobal(url, config = {}) {
+        return this.get(url, this._withGlobalKey(config));
+    }
+
+    /**
+     * POST autenticado com a chave de API global (rotas administrativas)
+     * @param {string} url - URL relativa
+     * @param {object} data - Dados
+     * @param {object} config - Configurações
+     * @returns {Promise}
+     */
+    async postGlobal(url, data = {}, config = {}) {
+        return this.post(url, data, this._withGlobalKey(config));
+    }
+
+    /**
+     * PUT autenticado com a chave de API global (rotas administrativas)
+     * @param {string} url - URL relativa
+     * @param {object} data - Dados
+     * @param {object} config - Configurações
+     * @returns {Promise}
+     */
+    async putGlobal(url, data = {}, config = {}) {
+        return this.put(url, data, this._withGlobalKey(config));
+    }
+
+    /**
+     * DELETE autenticado com a chave de API global (rotas administrativas)
+     * @param {string} url - URL relativa
+     * @param {object} config - Configurações
+     * @returns {Promise}
+     */
+    async deleteGlobal(url, config = {}) {
+        return this.delete(url, this._withGlobalKey(config));
     }
 
     /**
      * Requisição com retry automático
      * @private
      */
-    async _requestWithRetry(method, url, data = null, config = {}, attempt = 0) {
+    async _requestWithRetry(method, url, data = undefined, config = {}, attempt = 0) {
         try {
             const response = await this.instance({
                 method,
@@ -224,11 +292,19 @@ export class HttpClient {
     }
 
     /**
+     * Define nova API Key global/admin
+     * @param {string} globalApiKey - Nova chave de API global
+     */
+    setGlobalApiKey(globalApiKey) {
+        this.globalApiKey = globalApiKey;
+    }
+
+    /**
      * Define nova URL base
      * @param {string} baseUrl - Nova URL base
      */
     setBaseUrl(baseUrl) {
         this.baseUrl = baseUrl;
-        this.instance.defaults.baseURL = baseUrl;
+        this.instance.defaults.baseURL = this._resolveApiBaseUrl(baseUrl);
     }
 }

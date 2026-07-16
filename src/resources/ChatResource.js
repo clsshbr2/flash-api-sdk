@@ -46,10 +46,11 @@ export class ChatResource {
     }
 
     /**
-     * Envia áudio (convertido automaticamente para Opus/OGG pela API)
+     * Envia áudio (convertido automaticamente para Opus/OGG pela API quando ptt=true)
      * @param {Object} data
      * @param {string} data.jid - Número/JID do destinatário
      * @param {string} data.audio - URL ou base64 do áudio
+     * @param {boolean} data.ptt - true envia como áudio gravado (voice note), false como arquivo de áudio normal
      * @returns {Promise<Object>}
      */
     async sendAudio(data) {
@@ -61,7 +62,8 @@ export class ChatResource {
      * @param {Object} data
      * @param {string} data.jid - Número/JID do destinatário
      * @param {string} data.document - URL ou base64 do documento
-     * @param {string} data.filename - Nome do arquivo
+     * @param {string} data.fileName - Nome do arquivo
+     * @param {string} data.mimetype - Tipo MIME do arquivo
      * @param {string} data.caption - Legenda (opcional)
      * @returns {Promise<Object>}
      */
@@ -73,8 +75,11 @@ export class ChatResource {
      * Envia localização
      * @param {Object} data
      * @param {string} data.jid - Número/JID do destinatário
-     * @param {number} data.latitude - Latitude
-     * @param {number} data.longitude - Longitude
+     * @param {Object} data.location
+     * @param {number} data.location.degreesLatitude - Latitude
+     * @param {number} data.location.degreesLongitude - Longitude
+     * @param {string} data.location.name - Nome do local (opcional)
+     * @param {string} data.location.address - Endereço (opcional)
      * @returns {Promise<Object>}
      */
     async sendLocation(data) {
@@ -85,7 +90,16 @@ export class ChatResource {
      * Envia cartão de contato (vCard)
      * @param {Object} data
      * @param {string} data.jid - Número/JID do destinatário
-     * @param {Object} data.contact - Dados do contato a enviar
+     * @param {string} data.displayName - Nome de exibição do contato (opcional)
+     * @param {Object} data.contact
+     * @param {string} data.contact.firstName - Primeiro nome
+     * @param {string} data.contact.lastName - Sobrenome (opcional)
+     * @param {string} data.contact.organization - Empresa (opcional)
+     * @param {string} data.contact.jobTitle - Cargo (opcional)
+     * @param {string} data.contact.phone - Telefone
+     * @param {string} data.contact.email - E-mail (opcional)
+     * @param {string} data.contact.website - Website (opcional)
+     * @param {Object} data.contact.address - Endereço (opcional): street, city, state, zip, country
      * @returns {Promise<Object>}
      */
     async sendContact(data) {
@@ -96,7 +110,7 @@ export class ChatResource {
      * Cria e envia figurinha (sticker) a partir de imagem
      * @param {Object} data
      * @param {string} data.jid - Número/JID do destinatário
-     * @param {string} data.image - URL ou base64 da imagem
+     * @param {string} data.sticker - URL ou base64 da imagem
      * @returns {Promise<Object>}
      */
     async sendSticker(data) {
@@ -107,8 +121,10 @@ export class ChatResource {
      * Reage a uma mensagem com emoji
      * @param {Object} data
      * @param {string} data.jid - Número/JID do destinatário
-     * @param {string} data.id_message - ID da mensagem a reagir
-     * @param {string} data.emoji - Emoji da reação (string vazia remove a reação)
+     * @param {Object} data.react
+     * @param {string} data.react.messageId - ID da mensagem a reagir
+     * @param {string} data.react.emoji - Emoji da reação (string vazia remove a reação)
+     * @param {number} data.delay - Delay em ms (opcional)
      * @returns {Promise<Object>}
      */
     async sendReaction(data) {
@@ -119,9 +135,10 @@ export class ChatResource {
      * Cria uma enquete
      * @param {Object} data
      * @param {string} data.jid - Número/JID do destinatário
-     * @param {string} data.name - Pergunta/título da enquete
-     * @param {Array<string>} data.options - Opções da enquete
-     * @param {number} data.selectableCount - Quantidade de opções selecionáveis (opcional)
+     * @param {Object} data.poll
+     * @param {string} data.poll.name - Pergunta/título da enquete
+     * @param {Array<string>} data.poll.values - Opções da enquete
+     * @param {number} data.poll.selectableCount - Quantidade de opções selecionáveis (0 = múltipla escolha)
      * @returns {Promise<Object>}
      */
     async sendPoll(data) {
@@ -179,7 +196,9 @@ export class ChatResource {
      * Simula "digitando…" ou "gravando áudio…"
      * @param {Object} data
      * @param {string} data.jid - Número/JID do destinatário
-     * @param {string} data.type - 'composing' (digitando) ou 'recording' (gravando áudio)
+     * @param {boolean} data.typing - true inicia o status, false pausa
+     * @param {boolean} data.audio - true exibe "gravando áudio", false exibe "digitando" (opcional)
+     * @param {number} data.delay - Delay em ms antes de aplicar o status (opcional)
      * @returns {Promise<Object>}
      */
     async typing(data) {
@@ -187,10 +206,10 @@ export class ChatResource {
     }
 
     /**
-     * Marca mensagens como lidas
+     * Marca uma mensagem como lida
      * @param {Object} data
      * @param {string} data.jid - Número/JID da conversa
-     * @param {Array<string>} data.ids - IDs das mensagens (opcional, dependendo da implementação)
+     * @param {string} data.messageId - ID da mensagem a marcar como lida
      * @returns {Promise<Object>}
      */
     async markRead(data) {
@@ -199,7 +218,10 @@ export class ChatResource {
 
     /**
      * Lista mensagens de uma conversa
-     * @param {Object} params - Parâmetros de query (ex: jid, limit, before)
+     * @param {Object} params - Parâmetros de query
+     * @param {string} params.jid - JID da conversa
+     * @param {number} params.limit - Quantidade de mensagens (padrão: 50)
+     * @param {number} params.offset - Offset de paginação (padrão: 0)
      * @returns {Promise<Object>}
      */
     async getMessages(params = {}) {
@@ -208,10 +230,14 @@ export class ChatResource {
 
     /**
      * Lista conversas da sessão
+     * @param {Object} params - Parâmetros de query
+     * @param {number} params.page - Página (padrão: 1)
+     * @param {number} params.limit - Quantidade por página, máximo 100 (padrão: 50)
+     * @param {string} params.search - Busca textual (opcional)
      * @returns {Promise<Object>}
      */
-    async getChats() {
-        return this.http.get('/chat/chats');
+    async getChats(params = {}) {
+        return this.http.get('/chat/chats', { params });
     }
 
     /**
@@ -224,9 +250,9 @@ export class ChatResource {
     }
 
     /**
-     * Converte mídia de uma mensagem recebida em base64
+     * Converte mídia de uma mensagem recebida (imagem, vídeo ou áudio) em base64
      * @param {Object} data
-     * @param {string} data.id_message - ID da mensagem com mídia
+     * @param {Object} data.message - Objeto de mensagem bruto do Baileys contendo imageMessage, videoMessage ou audioMessage
      * @returns {Promise<Object>}
      */
     async mediaToBase64(data) {

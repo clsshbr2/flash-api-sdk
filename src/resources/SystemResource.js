@@ -1,6 +1,6 @@
 // src/resources/SystemResource.js
 /**
- * Resource para informações do sistema (requer global API key)
+ * Resource para informações do sistema (requer a chave de API global/admin)
  */
 export class SystemResource {
     /**
@@ -15,7 +15,7 @@ export class SystemResource {
      * @returns {Promise<Object>}
      */
     async status() {
-        return this.http.get('/system/status');
+        return this.http.getGlobal('/system/status');
     }
 
     /**
@@ -23,6 +23,6 @@ export class SystemResource {
      * @returns {Promise<Object>}
      */
     async config() {
-        return this.http.get('/system/config');
+        return this.http.getGlobal('/system/config');
     }
 }

@@ -17,31 +17,36 @@ import {
 export class FlashApi {
     /**
      * @param {Object} config - Configurações
-     * @param {string} config.baseUrl - URL base da API (padrão: http://localhost:3000)
-     * @param {string} config.apiKey - Chave de API
+     * @param {string} config.baseUrl - URL base da API, sem o prefixo /api (padrão: http://localhost:3000)
+     * @param {string} config.apiKey - Chave de API da sessão
+     * @param {string} config.globalApiKey - Chave de API global/admin (necessária para session.create/list/health/delete e system.status/config)
      * @param {number} config.timeout - Timeout em ms (padrão: 30000)
      * @param {number} config.retries - Tentativas de requisição (padrão: 3)
-     * @param {string} config.wsUrl - URL do WebSocket (padrão: ws://localhost:3000/ws)
-     * @param {string} config.wsSecret - Segredo do WebSocket (opcional)
+     * @param {string} config.wsUrl - URL do WebSocket (padrão: derivada de baseUrl + /ws)
+     * @param {string} config.wsSecret - Chave usada para autenticar no WebSocket (padrão: apiKey da sessão)
      * @param {number} config.wsReconnectAttempts - Tentativas de reconexão (padrão: 5)
      */
     constructor(config = {}) {
         // Normalizar configurações internas (guardadas em `options` para não
         // colidir com o resource `config` de /api/config/*)
+        const baseUrl = config.baseUrl || 'http://localhost:3000';
         this.options = {
-            baseUrl: config.baseUrl || 'http://localhost:3000',
+            baseUrl,
             apiKey: config.apiKey,
-            timeout: config.timeout || 30000,
-            retries: config.retries || 3,
-            wsUrl: config.wsUrl || 'ws://localhost:3000/ws',
-            wsSecret: config.wsSecret,
-            wsReconnectAttempts: config.wsReconnectAttempts || 5,
+            globalApiKey: config.globalApiKey,
+            timeout: config.timeout ?? 30000,
+            retries: config.retries ?? 3,
+            wsUrl: config.wsUrl || this._resolveWsUrl(baseUrl),
+            wsSecret: config.wsSecret || config.apiKey,
+            wsEvents: config.events,
+            wsReconnectAttempts: config.wsReconnectAttempts ?? 5,
         };
 
         // Inicializar HTTP Client
         this.http = new HttpClient({
             baseUrl: this.options.baseUrl,
             apiKey: this.options.apiKey,
+            globalApiKey: this.options.globalApiKey,
             timeout: this.options.timeout,
             retries: this.options.retries,
         });
@@ -50,6 +55,7 @@ export class FlashApi {
         this.ws = new WebSocketClient({
             url: this.options.wsUrl,
             secret: this.options.wsSecret,
+            events: this.options.wsEvents,
             reconnectAttempts: this.options.wsReconnectAttempts,
         });
 
@@ -60,6 +66,17 @@ export class FlashApi {
         this.group = new GroupResource(this.http);
         this.session = new SessionResource(this.http);
         this.system = new SystemResource(this.http);
+    }
+
+    /**
+     * Deriva a URL do WebSocket a partir da URL base.
+     * O servidor expõe o WebSocket em /ws (fora do prefixo /api das rotas REST),
+     * então o sufixo /api é removido caso venha na baseUrl.
+     * @private
+     */
+    _resolveWsUrl(baseUrl) {
+        const origem = baseUrl.replace(/\/+$/, '').replace(/\/api$/, '');
+        return `${origem.replace(/^http/, 'ws')}/ws`;
     }
 
     /**
@@ -78,6 +95,15 @@ export class FlashApi {
     setBaseUrl(baseUrl) {
         this.options.baseUrl = baseUrl;
         this.http.setBaseUrl(baseUrl);
+    }
+
+    /**
+     * Define nova API Key global/admin
+     * @param {string} globalApiKey - Nova chave de API global
+     */
+    setGlobalApiKey(globalApiKey) {
+        this.options.globalApiKey = globalApiKey;
+        this.http.setGlobalApiKey(globalApiKey);
     }
 
     /**

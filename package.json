@@ -1,6 +1,6 @@
 {
   "name": "flash-api-sdk",
-  "version": "1.0.2",
+  "version": "1.0.5",
   "description": "SDK JavaScript oficial da Flash API - Multi-sessão WhatsApp",
   "main": "src/index.js",
   "types": "src/index.d.ts",
@@ -21,7 +21,8 @@
     "format": "prettier --write src/",
     "docs": "vitepress build docs",
     "docs:dev": "vitepress dev docs",
-    "prepublish": "npm run build && npm run test"
+    "prepublish": "npm run build && npm run test",
+    "teste": "test/index.js"
   },
   "keywords": [
     "whatsapp",

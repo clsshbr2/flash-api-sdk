@@ -11,28 +11,29 @@ export class SessionResource {
     }
 
     /**
-     * Cria uma nova sessão
+     * Cria uma nova sessão (requer a chave de API global/admin)
      * @param {Object} data
-     * @param {string} data.nome_sessao - Nome da sessão
-     * @param {string} data.apikey - Chave da API (opcional, gera automaticamente)
+     * @param {string} data.nome_sessao - Nome da sessão (mínimo 6 caracteres)
+     * @param {string} data.apikey - Chave da API em formato UUID v4 (opcional, gera automaticamente)
      * @param {string} data.webhook_url - URL do webhook (opcional)
-     * @param {boolean} data.webhook_status - Status do webhook (opcional)
+     * @param {number} data.webhook_status - Status do webhook: 1 ou 0 (opcional)
      * @param {Array<string>} data.events - Lista de eventos (opcional)
      * @param {boolean} data.leitura_automatica - Ler automaticamente (opcional)
-     * @param {string} data.numero - Número para pairing (opcional)
+     * @param {string} data.numero - Número para pairing na criação (opcional)
      * @param {boolean} data.rejeitar_ligacoes - Rejeitar ligações (opcional)
+     * @param {string} data.msg_rejectcalls - Mensagem ao rejeitar ligação (opcional)
      * @param {boolean} data.ignorar_grupos - Ignorar grupos (opcional)
      * @param {Object} data.proxy - Config de proxy (opcional)
      * @returns {Promise<Object>}
      */
     async create(data) {
-        return this.http.post('/session/create_sessao', data);
+        return this.http.postGlobal('/session/create_sessao', data);
     }
 
     /**
      * Conecta uma sessão (gera QR Code)
      * @param {Object} data
-     * @param {string} data.numero - Número para pairing (opcional)
+     * @param {string} data.phoneNumber - Número para pairing via código (opcional)
      * @returns {Promise<Object>}
      */
     async connect(data = {}) {
@@ -74,28 +75,28 @@ export class SessionResource {
     }
 
     /**
-     * Lista todas as sessões (requer global API key)
+     * Lista todas as sessões (requer a chave de API global/admin)
      * @returns {Promise<Object>}
      */
     async list() {
-        return this.http.get('/session/list');
+        return this.http.getGlobal('/session/list');
     }
 
     /**
-     * Verifica saúde do sistema (requer global API key)
+     * Verifica saúde do sistema (requer a chave de API global/admin)
      * @returns {Promise<Object>}
      */
     async health() {
-        return this.http.get('/session/health');
+        return this.http.getGlobal('/session/health');
     }
 
     /**
-     * Deleta uma sessão (requer global API key)
+     * Deleta uma sessão (requer a chave de API global/admin)
      * @param {string} sessionId - ID da sessão
      * @returns {Promise<Object>}
      */
     async delete(sessionId) {
-        return this.http.delete(`/session/delete/${sessionId}`);
+        return this.http.deleteGlobal(`/session/delete/${sessionId}`);
     }
 
     /**

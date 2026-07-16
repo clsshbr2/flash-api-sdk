@@ -72,23 +72,25 @@ await client.chat.sendText({
 
 ## 🔑 Autenticação
 
-A Flash API usa dois níveis de chave, enviados via header `apikey`:
+A Flash API usa dois níveis de chave, ambos enviados via header `apikey`:
 
-| Chave              | Uso                                                                | Escopo     |
-| ------------------ | ------------------------------------------------------------------ | ---------- |
-| `GLOBAL_API_KEY`   | Rotas administrativas (criar/listar/remover sessões, sistema)      | Global     |
-| `apikey` da sessão | Rotas de mensageria, contatos, grupos e configuração de uma sessão | Por sessão |
+| Chave              | Uso                                                                  | Escopo     | Config do SDK  |
+| ------------------ | --------------------------------------------------------------------- | ---------- | -------------- |
+| `GLOBAL_API_KEY`   | `session.create/list/health/delete` e `system.status/config`          | Global     | `globalApiKey` |
+| `apikey` da sessão | Demais rotas: chat, contact, group, config e `session.connect/status/…` | Por sessão | `apiKey`       |
 
-No SDK, basta passar a chave correspondente ao criar o cliente ou trocá-la depois:
+Como as duas chaves podem ser necessárias ao mesmo tempo (ex: criar uma sessão e em seguida enviar mensagens por ela), o SDK aceita as duas simultaneamente e escolhe a correta automaticamente por método:
 
 ```javascript
 const client = new FlashApi({
   baseUrl: "http://localhost:3000",
-  apiKey: "SEU_GLOBAL_API_KEY", // ou a apikey de uma sessão específica
+  apiKey: "apikey-da-sessao", // usada nas rotas de sessão/chat/contact/group/config
+  globalApiKey: "SEU_GLOBAL_API_KEY", // usada apenas nas rotas administrativas
 });
 
-// Trocar a chave em tempo de execução
-client.setApiKey("nova-apikey");
+// Trocar as chaves em tempo de execução
+client.setApiKey("nova-apikey-de-sessao");
+client.setGlobalApiKey("nova-global-api-key");
 
 // Trocar a URL base
 client.setBaseUrl("https://minha-flash-api.com");
@@ -116,7 +118,7 @@ import FlashApi from "flash-api-sdk";
 
 const client = new FlashApi({
   baseUrl: "http://localhost:3000",
-  apiKey: "SEU_GLOBAL_API_KEY",
+  globalApiKey: "SEU_GLOBAL_API_KEY", // usada apenas em session.create/list/health/delete e system.*
 });
 
 // 1. Criar a sessão (retorna a apikey da nova sessão)
@@ -128,10 +130,10 @@ const { data } = await client.session.create({
   events: ["message_received", "connection_update"],
 });
 
-// 2. Trocar para a apikey da sessão recém-criada
+// 2. Trocar para a apikey da sessão recém-criada (demais rotas usam essa chave)
 client.setApiKey(data.apikey);
 
-// 3. Conectar (gera QR Code / pairing code)
+// 3. Conectar (gera QR Code, ou informe phoneNumber para pairing via código)
 const conexao = await client.session.connect();
 console.log(conexao);
 ```
@@ -166,13 +168,15 @@ await client.chat.sendAudio({
 await client.chat.sendDocument({
   jid: "5511999999999@s.whatsapp.net",
   document: "https://exemplo.com/contrato.pdf",
-  filename: "contrato.pdf",
+  fileName: "contrato.pdf",
 });
 
 await client.chat.sendLocation({
   jid: "5511999999999@s.whatsapp.net",
-  latitude: -22.9068,
-  longitude: -43.1729,
+  location: {
+    degreesLatitude: -22.9068,
+    degreesLongitude: -43.1729,
+  },
 });
 ```
 
@@ -181,17 +185,19 @@ await client.chat.sendLocation({
 ```javascript
 await client.chat.sendPoll({
   jid: "5511999999999@s.whatsapp.net",
-  name: "Qual seu horário preferido?",
-  options: ["Manhã", "Tarde", "Noite"],
-  selectableCount: 1,
+  poll: {
+    name: "Qual seu horário preferido?",
+    values: ["Manhã", "Tarde", "Noite"],
+    selectableCount: 1,
+  },
 });
 
 await client.chat.sendButtons({
   jid: "5511999999999@s.whatsapp.net",
   text: "Escolha uma opção:",
   buttons: [
-    { id: "op1", text: "Falar com atendente" },
-    { id: "op2", text: "Ver catálogo" },
+    { buttonId: "op1", buttonText: { displayText: "Falar com atendente" } },
+    { buttonId: "op2", buttonText: { displayText: "Ver catálogo" } },
   ],
 });
 ```
@@ -334,7 +340,7 @@ Requisições que falham por timeout ou erro de servidor (5xx) são automaticame
 | `typing(data)`                 | `POST /chat/typing`                  | "Digitando…" / "Gravando áudio…"  |
 | `markRead(data)`               | `POST /chat/mark-read`               | Marca mensagens como lidas        |
 | `getMessages(params?)`         | `GET /chat/messages`                 | Lista mensagens de uma conversa   |
-| `getChats()`                   | `GET /chat/chats`                    | Lista conversas da sessão         |
+| `getChats(params?)`            | `GET /chat/chats`                    | Lista conversas da sessão (page, limit, search) |
 | `deleteMessage(idMessage)`     | `DELETE /chat/delete/:id_message`    | Apaga uma mensagem                |
 | `mediaToBase64(data)`          | `POST /chat/midiaToBase64`           | Converte mídia recebida em base64 |
 
