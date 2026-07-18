@@ -126,7 +126,7 @@ export class WebSocketClient extends EventEmitter {
                         // Processar fila de mensagens
                         this._processQueue();
 
-                        this.emit('open', 'conectado com a flashapi');
+                        this.emit('open', 'Conectado com a flashapi');
                         resolve();
                     };
 
@@ -187,7 +187,7 @@ export class WebSocketClient extends EventEmitter {
         // Enviada pelo servidor logo após a conexão ser aceita (autenticação via headers)
         if (payload.type === 'welcome') {
             this.isAuthenticated = true;
-            this.emit('authenticated', { clientId: payload.clientId, events: payload.events });
+            this.emit('authenticated', payload);
             return;
         }
 
@@ -198,7 +198,7 @@ export class WebSocketClient extends EventEmitter {
 
         // Emitir evento específico
         if (payload.event) {
-            this.emit(payload.event, payload.data);
+            this.emit(payload.event, payload);
         }
 
         // Emitir evento genérico 'message'

@@ -181,6 +181,10 @@ export interface FlashApiEvents {
     newsletter_settings_update: (data: any) => void;
 
     settings_update: (data: any) => void;
+    
+    welcome: (data: any) => void;
+    error: (data: any) => void;
+    message: (data: any) => void;
 }
 
 
