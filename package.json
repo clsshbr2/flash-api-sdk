@@ -1,6 +1,6 @@
 {
   "name": "flash-api-sdk",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "SDK JavaScript oficial da Flash API - Multi-sessão WhatsApp",
   "main": "src/index.js",
   "types": "src/index.d.ts",
