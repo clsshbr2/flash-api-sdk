@@ -52,7 +52,6 @@ tmp/
 temp/
 
 # Build outputs
-dist/
 build/
 
 postman_collection.json
